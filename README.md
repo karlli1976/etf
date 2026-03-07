@@ -1,79 +1,82 @@
-# ETF 组合策略回测系统
+# ETF Portfolio Strategy Backtester
 
-基于 Web 的 Python 应用，通过历史数据回测研究 ETF 组合策略。
+A web-based Python application for researching ETF portfolio strategies through historical data backtesting.
 
-## 核心假设
+[中文](README.zh.md)
 
-- 初始资金：100 万美元
-- 数据来源：Yahoo Finance 历史行情（Adj Close）
-- 默认组合：QQQ 60%、QLD 30%、TQQQ 10%
+## Core Assumptions
 
-## 功能需求
+- Starting capital: $1,000,000 USD
+- Data source: Yahoo Finance historical prices (Adjusted Close)
+- Default portfolio: QQQ 60%, QLD 30%, TQQQ 10%
 
-### 1. ETF 组合配置
+## Features
 
-- 用户可在页面上自定义 ETF 代码和持仓比例，支持增删行
-- 仓位合计必须等于 100% 才能运行回测
-- 提供"重置默认"按钮恢复 QQQ/QLD/TQQQ 初始配置
+### 1. Portfolio Configuration
 
-### 2. 历史数据管理
+- Define ETF tickers and allocation weights via an editable table; rows can be added or removed
+- Weights must sum to exactly 100% before a backtest can be run
+- "Reset to Default" button restores the QQQ/QLD/TQQQ starting configuration
 
-- 首次运行时从 Yahoo Finance 下载全量历史数据，保存至本地 `data/<TICKER>.csv`
-- 后续运行只下载增量数据（从上次缓存日期起），不重复拉取全量
-- ETF 覆盖范围：QQQ 从 1999 年起；QLD 从 2006 年 6 月起；TQQQ 从 2010 年 2 月起
-- 早期无实际数据的杠杆 ETF，以 QQQ 日收益 × 杠杆倍数模拟（QLD=2×，TQQQ=3×）
+### 2. Historical Data Management
 
-### 3. 回测策略
+- On first run, full history is downloaded from Yahoo Finance and cached locally to `data/<TICKER>.csv`
+- Subsequent runs fetch only incremental data (from the last cached date forward)
+- Coverage: QQQ from 1999; QLD from June 2006; TQQQ from February 2010
+- For periods before a leveraged ETF existed, returns are simulated as QQQ daily return × leverage multiple (QLD=2×, TQQQ=3×)
 
-- **锚定仓位**：QQQ 始终持有，占其配置比例
-- **条件仓位**：其他 ETF（如 QLD、TQQQ）在 QQQ 收盘价 ≥ SMA（N 日简单移动平均）时持有，低于时清仓持现金
-- 信号参考值 SMA 的窗口大小（N）由用户指定
+### 3. Strategy Logic
 
-### 4. 回测修正参数
+- **Anchor position**: QQQ is always held at its configured weight
+- **Conditional positions**: all other ETFs (e.g. QLD, TQQQ) are held when QQQ closing price ≥ SMA(N), and liquidated to cash when below
+- The SMA window N is user-configurable
 
-以下参数用于提升回测真实性，用户可调整后对比差异：
+### 4. Backtest Correction Parameters
 
-**信号延迟**
-- 0 日：用当天收盘价判断并计入当天收益（含前瞻偏差，SMA 窗口越短偏差越大）
-- 1 日（推荐）：用前一日收盘信号决定当日持仓，模拟真实操作
+These parameters control backtest realism and can be adjusted to compare results:
 
-**交易成本模式**（三选一）
-- 富途牛牛逐笔精算（默认）：按实际费率计算每次换仓成本
-  - 佣金：$0.0049/股，最低 $0.99
-  - 平台使用费：$0.005/股，最低 $1.00
-  - 交收费：$0.003/股，最高 $7.00
-  - SEC 监管费（卖出）：成交额 × 0.00278%
-  - FINRA 交易费（卖出）：$0.000166/股，最低 $0.01
-  - 实际约 0.015%–0.03%/笔
-- 固定费率：手动输入每次换仓的统一成本比例
-- 不计成本：忽略所有交易摩擦，查看理论上界
+**Signal Lag**
+- 0 days: signal and return are evaluated on the same day (look-ahead bias; more pronounced with shorter SMA windows)
+- 1 day (recommended): yesterday's signal determines today's positions, matching real-world execution
 
-**杠杆 ETF 模拟说明**（警示）
-- QLD（2×）早期模拟忽略约 −4%/年的波动率拖累
-- TQQQ（3×）早期模拟忽略约 −12%/年的波动率拖累
+**Transaction Cost Mode** (choose one)
+- **Futu牛牛 per-trade calculation** (default): exact fees computed for each signal flip based on position size and ETF price
+  - Commission: $0.0049/share, min $0.99/order
+  - Platform fee: $0.005/share, min $1.00/order
+  - Settlement: $0.003/share, max $7.00/order
+  - SEC regulatory fee (sells only): 0.00278% of trade value
+  - FINRA TAF (sells only): $0.000166/share, min $0.01/order
+  - Effective cost: ~0.015%–0.03% per trade
+- **Fixed rate**: manually specify a flat cost percentage per flip
+- **No cost**: ignore all friction (theoretical upper bound)
 
-### 5. 手动对比模式（Tab 1）
+**Leveraged ETF Simulation Warning**
+- QLD (2×) simulation ignores ~−4%/year volatility decay
+- TQQQ (3×) simulation ignores ~−12%/year volatility decay
+- Actual early-period returns will be lower than simulated values
 
-- 最多同时输入 5 个 SMA 参考值，支持增删
-- 点击"确认并运行回测"后并行跑多个策略
-- 结果展示：
-  - **逐年表格**：各 ETF 年化收益（%）+ 各 SMA 策略的资产总值
-  - **资产走势图**：各 SMA 策略的每日资产总值折线，叠加 QQQ 买入持有参考线
-  - **统计摘要**：每个 SMA 策略独立展示最终资产总值、年化收益率（CAGR）、最大回撤
+### 5. Manual Comparison Mode (Tab 1)
 
-### 6. SMA 范围扫描 · Top 10（Tab 2）
+- Enter up to 5 SMA values simultaneously; values can be added or removed
+- Runs all strategies in sequence on clicking "Run Backtest"
+- Results:
+  - **Yearly table**: each ETF's annual return (%) and portfolio value for each SMA strategy
+  - **Equity curve chart**: daily portfolio value per SMA strategy, with QQQ buy-and-hold as a reference line
+  - **Summary stats**: final portfolio value, CAGR, and max drawdown shown per strategy
 
-**扫描设置**
-- 起始 SMA、结束 SMA、步长（默认 SMA30→250，步长 5，共 45 个策略）
-- Top 10 排序依据：CAGR / 最终资产总值 / 最大回撤（最小）
+### 6. SMA Range Sweep · Top 10 (Tab 2)
 
-**全段结果**
-- Top 10 表格：SMA 窗口 | 最终资产总值 | CAGR | 最大回撤
-- 全局 CAGR 柱状图：所有 SMA 的年化收益分布，Top 10 深色高亮
-- 实时进度条显示扫描进度
+**Sweep Configuration**
+- Set start SMA, end SMA, and step size (default: SMA 30→250, step 5, 45 strategies total)
+- Sort Top 10 by: CAGR / Final portfolio value / Max drawdown (smallest)
 
-**样本外测试（可开关）**
-- 用户设定训练期 / 测试期分割日期（默认 2015-01-01）
-- 所有 SMA 分别在训练期和测试期计算 CAGR 和最大回撤并排名
-- 展示训练期 Top 10 在测试期的排名对比表（含排名变化 ↑/↓）
-- 散点图：X 轴=训练期排名，Y 轴=测试期排名，附对角线参考；点越靠近对角线表示策略越稳健，偏离越大越可能过拟合
+**Full-period Results**
+- Top 10 table: SMA window | Final value | CAGR | Max drawdown
+- Global CAGR bar chart across all SMA values, with Top 10 highlighted in dark blue
+- Real-time progress bar during scan
+
+**Out-of-Sample Validation** (toggle)
+- User sets a train/test split date (default: 2015-01-01)
+- Every SMA is ranked by CAGR separately for the training period and the test period
+- Comparison table shows where each training-period Top 10 ranked in the test period, with rank change (↑/↓)
+- Scatter plot: training rank (X) vs. test rank (Y) with a diagonal reference line — points close to the diagonal indicate a robust strategy; points far from it suggest overfitting
