@@ -192,7 +192,7 @@ def run_backtest(
     prev_end = {}
     for year in sorted(common_idx.year.unique()):
         yd = common_idx[common_idx.year == year]
-        if len(yd) == 0:
+        if len(yd) == 0:  # pragma: no cover
             continue
         row = {"Year": year}
         for ticker in tickers:
